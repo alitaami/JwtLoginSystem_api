@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(Data.TestContext.TestContext))]
-    [Migration("20230925202954_initDB")]
-    partial class initDB
+    [Migration("20230925222639_InitDB")]
+    partial class InitDB
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -57,6 +57,28 @@ namespace Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("RefreshTokens");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 2,
+                            ExpiresAt = new DateTime(2023, 10, 11, 1, 31, 34, 443, DateTimeKind.Unspecified).AddTicks(3333),
+                            IsRevoked = false,
+                            IsUsed = false,
+                            IssuedAt = new DateTime(2023, 9, 26, 1, 31, 34, 443, DateTimeKind.Unspecified).AddTicks(3333),
+                            Token = "D66709F8-27E9-4164-AF91-CA0877F10FEF",
+                            UserId = 1
+                        },
+                        new
+                        {
+                            Id = 3,
+                            ExpiresAt = new DateTime(2023, 10, 11, 1, 31, 34, 443, DateTimeKind.Unspecified).AddTicks(3333),
+                            IsRevoked = false,
+                            IsUsed = false,
+                            IssuedAt = new DateTime(2023, 9, 26, 1, 31, 34, 443, DateTimeKind.Unspecified).AddTicks(3333),
+                            Token = "67C8F733-BF6A-4E49-8109-522DACCC60F7",
+                            UserId = 2
+                        });
                 });
 
             modelBuilder.Entity("Entities.Models.User", b =>
@@ -99,6 +121,30 @@ namespace Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Age = 30,
+                            Email = "sample1@example.com",
+                            FullName = "Sample User One",
+                            IsActive = true,
+                            PasswordHash = "8jr0nptvznD5VS2WniCx5y6jYyQOSw1ZpfsulA8c/3A=",
+                            SecurityStamp = new Guid("0855b139-340a-47a5-9a24-a24b62886619"),
+                            UserName = "ali"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Age = 25,
+                            Email = "sample2@example.com",
+                            FullName = "Sample User Two",
+                            IsActive = true,
+                            PasswordHash = "8jr0nptvznD5VS2WniCx5y6jYyQOSw1ZpfsulA8c/3A=",
+                            SecurityStamp = new Guid("68ff43f9-ff39-4b44-91fd-abd255efc354"),
+                            UserName = "ata"
+                        });
                 });
 
             modelBuilder.Entity("Entities.Models.RefreshToken", b =>

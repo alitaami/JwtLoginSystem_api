@@ -202,7 +202,7 @@ namespace WebFramework.Configuration
                     {
                         Password = new OpenApiOAuthFlow
                         {
-                            TokenUrl = new Uri("https://localhost:7072/api/Account/Login"),
+                            TokenUrl = new Uri("https://localhost:7153/api/Account/Login"),
                             Scopes = new Dictionary<string, string>
             {
                 {"read", "Read access to protected resources."},
@@ -513,7 +513,8 @@ namespace WebFramework.Configuration
             builder.Services.AddDistributedMemoryCache();
             builder.Services.AddTransient(typeof(IRepository<>), typeof(Repository<>));
             builder.Services.AddTransient<IAccountService, AccountService>();
-            builder.Services.AddTransient<IJwtService, JwtService>(); 
+            builder.Services.AddTransient<IUserService, UserService>();
+            builder.Services.AddTransient<IJwtService, JwtService>();
             //builder.Services.AddSingleton<SendMail>();
             //builder.Services.Configure<Common.Utilities.EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
             //builder.Services.AddAutoMapper(typeof(WebApplication));
@@ -544,6 +545,6 @@ namespace WebFramework.Configuration
                 //options.ExcludedHosts.Add("example.com");
                 //options.ExcludedHosts.Add("www.example.com");
             });
-        } 
+        }
     }
 }

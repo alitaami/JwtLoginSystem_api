@@ -21,46 +21,53 @@ namespace Services.Services
     {
         // using JwtSettings configuration  that we wrote  in Program.cs
         private readonly JwtSettings _settings;
-         public JwtService(IOptionsSnapshot<JwtSettings> settings)
+        public JwtService(IOptionsSnapshot<JwtSettings> settings)
         {
             _settings = settings.Value;
- 
+
         }
         public async Task<AccessToken> Generate(User user)
         {
-            var secretKey = Encoding.UTF8.GetBytes(_settings.SecretKey); // it should longer than 16 character
-            var signingCredentials = new SigningCredentials(new SymmetricSecurityKey(secretKey), SecurityAlgorithms.HmacSha256Signature);
-
-            // for encryption and security
-            var encryptionkey = Encoding.UTF8.GetBytes(_settings.Encryptkey); //must be 16 character
-            var encryptingCredentials = new EncryptingCredentials(new SymmetricSecurityKey(encryptionkey), SecurityAlgorithms.Aes128KW, SecurityAlgorithms.Aes128CbcHmacSha256);
-
-            //var certificate = new X509Certificate2("d:\\aaaa2.cer"/*, "P@ssw0rd"*/);
-            //var encryptingCredentials = new X509EncryptingCredentials(certificate);
-
-            var claims = getClaims(user);
-
-            var descriptor = new SecurityTokenDescriptor
+            try
             {
-                Issuer = _settings.Issuer,
-                Audience = _settings.Audience,
-                IssuedAt = DateTime.Now,
-                NotBefore = DateTime.Now.AddMinutes(_settings.NotBeforeMinutes),
-                Expires = DateTime.Now.AddMinutes(_settings.ExpirationMinutes),
-                SigningCredentials = signingCredentials,
-                EncryptingCredentials = encryptingCredentials,
-                Subject = new ClaimsIdentity(claims)
-            };
+                var secretKey = Encoding.UTF8.GetBytes(_settings.SecretKey); // it should longer than 16 character
+                var signingCredentials = new SigningCredentials(new SymmetricSecurityKey(secretKey), SecurityAlgorithms.HmacSha256Signature);
 
-            var tokenHandler = new JwtSecurityTokenHandler();
+                // for encryption and security
+                var encryptionkey = Encoding.UTF8.GetBytes(_settings.Encryptkey); //must be 16 character
+                var encryptingCredentials = new EncryptingCredentials(new SymmetricSecurityKey(encryptionkey), SecurityAlgorithms.Aes128KW, SecurityAlgorithms.Aes128CbcHmacSha256);
 
-            var securityToken = tokenHandler.CreateJwtSecurityToken(descriptor);
-           
-            var refreshToken = CreateRefreshToken.GenerateRefreshToken();
+                //var certificate = new X509Certificate2("d:\\aaaa2.cer"/*, "P@ssw0rd"*/);
+                //var encryptingCredentials = new X509EncryptingCredentials(certificate);
 
-            //string encryptedJwt = tokenHandler.WriteToken(securityToken);
+                var claims = getClaims(user);
 
-            return new AccessToken(securityToken,refreshToken);
+                var descriptor = new SecurityTokenDescriptor
+                {
+                    Issuer = _settings.Issuer,
+                    Audience = _settings.Audience,
+                    IssuedAt = DateTime.Now,
+                    NotBefore = DateTime.Now.AddMinutes(_settings.NotBeforeMinutes),
+                    Expires = DateTime.Now.AddMinutes(_settings.ExpirationMinutes),
+                    SigningCredentials = signingCredentials,
+                    EncryptingCredentials = encryptingCredentials,
+                    Subject = new ClaimsIdentity(claims)
+                };
+
+                var tokenHandler = new JwtSecurityTokenHandler();
+
+                var securityToken = tokenHandler.CreateJwtSecurityToken(descriptor);
+
+                var refreshToken = CreateRefreshToken.GenerateRefreshToken();
+
+                //string encryptedJwt = tokenHandler.WriteToken(securityToken);
+
+                return new AccessToken(securityToken, refreshToken);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message, ex);
+            }
         }
 
         private IEnumerable<Claim> getClaims(User user)
@@ -77,7 +84,7 @@ namespace Services.Services
             new Claim(ClaimTypes.Email , user.Email.ToString()),
             new Claim(securityStampClaimType, user.SecurityStamp.ToString())
         };
-            
+
             return list;
 
         }
