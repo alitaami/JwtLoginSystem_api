@@ -1,17 +1,22 @@
-var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+using NLog;
+using NLog.Web;
+using WebFramework.Configuration;
 
-builder.Services.AddControllers();
+var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 
-var app = builder.Build();
+try
+{
+    WebApplication
+        .CreateBuilder(args)
+        .ConfigureServices()
+        .Build()
+        .Configure()
+        .Run();
+}
+catch (Exception ex)
+{
+    logger.Error(ex);
 
-// Configure the HTTP request pipeline.
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();
+    throw;
+}
