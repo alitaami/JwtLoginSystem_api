@@ -1,11 +1,11 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Microsoft.IdentityModel.Tokens;
 using Entities.Base;
 using Common.Resources;
+using Microsoft.Data.SqlClient;
 
 public class ServiceBase<Tclass>
     {

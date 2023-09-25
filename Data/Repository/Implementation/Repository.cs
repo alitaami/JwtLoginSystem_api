@@ -1,18 +1,18 @@
 ﻿using Common.Utilities;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
-
+ 
 namespace Data.Repositories
 {
     public class Repository<TEntity> : IRepository<TEntity>
         where TEntity : class 
     {
-        protected readonly TavContext DbContext;
+        protected readonly Data.TestContext.TestContext DbContext;
         public DbSet<TEntity> Entities { get; }
         public virtual IQueryable<TEntity> Table => Entities;
         public virtual IQueryable<TEntity> TableNoTracking => Entities.AsNoTracking();
 
-        public Repository(TavContext dbContext)
+        public Repository(Data.TestContext.TestContext dbContext)
         {
             DbContext = dbContext;
             Entities = DbContext.Set<TEntity>(); 

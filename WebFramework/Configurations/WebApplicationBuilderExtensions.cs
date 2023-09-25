@@ -1,5 +1,6 @@
 ﻿using Common;
 using Common.Utilities;
+using Data.TestContext;
 using Data.Repositories;
 using Entities.Models;
 using Entities.ViewModels;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -59,7 +61,7 @@ namespace WebFramework.Configuration
 
                 SetupNlog(builder);
 
-                //AddAppDbContext(builder, configuration);
+                AddAppDbContext(builder, configuration);
 
                 //AddRedisDb(builder, configuration);
 
@@ -104,13 +106,13 @@ namespace WebFramework.Configuration
         //    builder.Services.Configure<CacheSettings>(cacheSettingConfiguration);
 
         //}
-        //private static void AddAppDbContext(WebApplicationBuilder builder, IConfiguration configuration)
-        //{
-        //    builder.Services.AddDbContext<TavContext>(options =>
-        //    {
-        //        options.UseSqlServer("Data Source =.; Initial Catalog=TavDB; Integrated Security=true;Trust Server Certificate=true;");
-        //    });
-        //}
+        private static void AddAppDbContext(WebApplicationBuilder builder, IConfiguration configuration)
+        {
+            builder.Services.AddDbContext<Data.TestContext.TestContext>(options =>
+            {
+                options.UseSqlServer("Data Source =.; Initial Catalog=jwtDemo; Integrated Security=true;Trust Server Certificate=true;");
+            });
+        }
 
         //public static void AddHangFire(WebApplicationBuilder builder, IConfiguration configuration)
         //{

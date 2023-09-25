@@ -9,6 +9,12 @@ namespace Entities.Models
 {
     public class User
     {
+        public User()
+        {
+            IsActive = true;
+            SecurityStamp = Guid.NewGuid();
+        }
+
         [Key]
         public int Id { get; set; }
         [Required]
@@ -30,5 +36,6 @@ namespace Entities.Models
         public bool IsActive { get; set; }
         public Guid SecurityStamp { get; set; }
 
+        public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     }
 }

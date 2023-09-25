@@ -1,4 +1,5 @@
-﻿using Entities.Models;
+﻿using Common.Utilities;
+using Entities.Models;
 using Entities.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -54,10 +55,12 @@ namespace Services.Services
             var tokenHandler = new JwtSecurityTokenHandler();
 
             var securityToken = tokenHandler.CreateJwtSecurityToken(descriptor);
+           
+            var refreshToken = CreateRefreshToken.GenerateRefreshToken();
 
             //string encryptedJwt = tokenHandler.WriteToken(securityToken);
 
-            return new AccessToken(securityToken);
+            return new AccessToken(securityToken,refreshToken);
         }
 
         private IEnumerable<Claim> getClaims(User user)

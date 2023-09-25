@@ -1,14 +1,9 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Options;
+using System.Net;
 using System.Net.Mail;
 
 namespace Common.Utilities
-{
-    using Microsoft.Extensions.Options;
-    using System;
-    using System.Net;
-    using System.Net.Mail;
-    using System.Threading.Tasks;
-
+{ 
     public class SendMail
     {
         private readonly EmailSettings _smtpSettings;
