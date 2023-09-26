@@ -1,25 +1,26 @@
-#See https://aka.ms/containerfastmode to understand how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-#Depending on the operating system of the host machines(s) that will build or run the containers, the image specified in the FROM statement may need to be changed.
-#For more information, please see https://aka.ms/containercompat
-
-FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
-WORKDIR /app
-EXPOSE 80
-EXPOSE 443
-
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+# Use the official image as a parent image
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build-env
 WORKDIR /src
-COPY ["JwtLoginSystem_api/JwtLoginSystem_api.csproj", "JwtLoginSystem_api/"]
+
+# Use the SDK image to build the app
+COPY JwtLoginSystem_api/JwtLoginSystem_api.csproj JwtLoginSystem_api/
+COPY WebFramework/WebFramework.csproj WebFramework/
+COPY Services/Services.csproj Services/
+COPY Data/Data.csproj Data/              # <-- Add this line
+COPY Entity/Entity.csproj Entity/        # <-- Add this line
+COPY Common/Common.csproj Common/        # <-- Add this line
+
+# Restore all projects
 RUN dotnet restore "JwtLoginSystem_api/JwtLoginSystem_api.csproj"
+RUN dotnet restore "WebFramework/WebFramework.csproj"
+RUN dotnet restore "Services/Services.csproj"
+RUN dotnet restore "Data/Data.csproj"      # <-- Add this line
+RUN dotnet restore "Entity/Entity.csproj"  # <-- Add this line
+RUN dotnet restore "Common/Common.csproj"  # <-- Add this line
+
+# Copy everything else and build
 COPY . .
 WORKDIR "/src/JwtLoginSystem_api"
 RUN dotnet build "JwtLoginSystem_api.csproj" -c Release -o /app/build
 
-FROM build AS publish
-RUN dotnet publish "JwtLoginSystem_api.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM base AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "JwtLoginSystem_api.dll"]
+FROM m

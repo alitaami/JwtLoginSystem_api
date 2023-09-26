@@ -110,7 +110,7 @@ namespace WebFramework.Configuration
         {
             builder.Services.AddDbContext<Data.TestContext.TestContext>(options =>
             {
-                options.UseSqlServer("Data Source =.; Initial Catalog=jwtDemo; Integrated Security=true;Trust Server Certificate=true;");
+                options.UseSqlServer("Server=localhost;Database=jwtDemo;User Id=sa;Password=Complex@1234;");
             });
         }
 

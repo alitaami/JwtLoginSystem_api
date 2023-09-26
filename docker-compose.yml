@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  webapp:
+    build: 
+      context: .
+      dockerfile: JwtLoginSystem_api/Dockerfile
+    ports:
+      - "6000:80"
+      - "6001:443"
+    depends_on:
+      - db
+    environment:
+      - ConnectionString=Server=db;Database=jwtDemo;User Id=sa;Password=Complex@1234;
+
+  db:
+    image: "mcr.microsoft.com/mssql/server:2019-GA-ubuntu-16.04"
+    environment:
+      SA_PASSWORD: "Complex@1234"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
