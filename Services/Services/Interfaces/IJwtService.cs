@@ -10,6 +10,7 @@ namespace Services.Services.Interfaces
 {
     public interface IJwtService
     {
-        Task<AccessToken> Generate(User user);
+        Task<AccessToken> GenerateAccessToken(User user);
+        Task<refreshToken> GenerateRefreshToken(User user);
     }
 }

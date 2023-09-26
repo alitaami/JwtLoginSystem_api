@@ -5,6 +5,7 @@ using Entities.Base;
 using Entities.Models;
 using Entities.ViewModels;
 using Microsoft.Extensions.Logging;
+using Services.Base.JWT;
 using Services.Services.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -18,9 +19,10 @@ namespace Services.Services
     {
         private IJwtService _jwtService;
         private IUserService _user;
-
-        public AccountService(IUserService user, IJwtService jwtService, ILogger<AccountService> logger) : base(logger)
+        private IRepository<RefreshToken> _repoR;
+        public AccountService(IRepository<RefreshToken> repoR, IUserService user, IJwtService jwtService, ILogger<AccountService> logger) : base(logger)
         {
+            _repoR = repoR;
             _user = user;
             _jwtService = jwtService;
         }
@@ -64,7 +66,7 @@ namespace Services.Services
                 if (!user.IsActive)
                     return BadRequest(ErrorCodeEnum.BadRequest, Resource.UserIsNotActive, null);
 
-                var token = await _jwtService.Generate(user);
+                var token = await _jwtService.GenerateAccessToken(user);
                 // TODO: Also generate and return a refresh token here if needed.
                 return Ok(token);
             }
@@ -79,46 +81,40 @@ namespace Services.Services
         {
             try
             {
+                // Retrieve the stored refresh token
                 var storedRefreshTokenResult = await _user.GetRefreshTokenForUser(tokenRequest.username, cancellationToken);
-                var storedRefreshToken = storedRefreshTokenResult.Data as string;
-
-                if (string.IsNullOrWhiteSpace(storedRefreshToken))
+                var storedRefreshToken = storedRefreshTokenResult.Data as RefreshToken;
+  
+                if (storedRefreshToken == null || storedRefreshToken.ExpiresAt < DateTime.UtcNow || storedRefreshToken.IsUsed || storedRefreshToken.IsRevoked)
                 {
-                     return await PrepareInvalidTokenResponse(tokenRequest, cancellationToken);
-                }
-
-                var refreshTokenEntity = await _user.GetRefreshTokenByToken(storedRefreshToken, cancellationToken);
-                if (refreshTokenEntity == null)
-                {
+                    if (storedRefreshToken?.ExpiresAt < DateTime.UtcNow)
+                    {
+                        return await PrepareExpiredTokenResponse(tokenRequest, cancellationToken);
+                    }
                     return await PrepareInvalidTokenResponse(tokenRequest, cancellationToken);
                 }
 
-                if (refreshTokenEntity.ExpiresAt < DateTime.UtcNow)
-                {
-                    return await PrepareExpiredTokenResponse(tokenRequest, cancellationToken);
-                }
-
+                // Fetch associated user
                 var userResult = await _user.GetUserByUsername(tokenRequest.username, cancellationToken);
                 var user = userResult.Data as User;
 
                 if (user == null || !user.IsActive)
+                {
                     return NotFound(ErrorCodeEnum.NotFound, Resource.NotFound, null);
+                }
 
-                var newAccessToken = await _jwtService.Generate(user);
-
-                await _user.UpdateRefreshTokenForUser(tokenRequest.username, cancellationToken);
-                newAccessToken.refresh_token = CreateRefreshToken.GenerateRefreshToken();
-
-                return Ok(newAccessToken);
+                // Mark current refresh token as used
+                storedRefreshToken.IsUsed = true;
+                await _repoR.UpdateAsync(storedRefreshToken, cancellationToken);
+                  
+                return Ok(storedRefreshToken.Token);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during login process.");
+                _logger.LogError(ex, "Error during refresh token processing.");
                 return InternalServerError(ErrorCodeEnum.InternalError, Resource.GeneralErrorTryAgain, null);
             }
-
         }
-
         private async Task<ServiceResult> PrepareInvalidTokenResponse(TokenRequest tokenRequest, CancellationToken cancellationToken)
         {
             try

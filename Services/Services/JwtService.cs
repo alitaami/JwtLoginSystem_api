@@ -26,7 +26,7 @@ namespace Services.Services
             _settings = settings.Value;
 
         }
-        public async Task<AccessToken> Generate(User user)
+        public async Task<AccessToken> GenerateAccessToken(User user)
         {
             try
             {
@@ -56,21 +56,35 @@ namespace Services.Services
 
                 var tokenHandler = new JwtSecurityTokenHandler();
 
-                var securityToken = tokenHandler.CreateJwtSecurityToken(descriptor);
-
-                var refreshToken = CreateRefreshToken.GenerateRefreshToken();
+                var securityToken = tokenHandler.CreateJwtSecurityToken(descriptor); 
 
                 //string encryptedJwt = tokenHandler.WriteToken(securityToken);
 
-                return new AccessToken(securityToken, refreshToken);
+                return new AccessToken(securityToken);
             }
             catch (Exception ex)
             {
                 throw new Exception(ex.Message, ex);
             }
         }
+        public async Task<refreshToken> GenerateRefreshToken(User user)
+        {
+            // Generate the token value itself - this can be any unique value.  
+            var tokenValue = CreateRefreshToken.GenerateRefreshToken(); ;
 
-        private IEnumerable<Claim> getClaims(User user)
+            var token = new refreshToken
+            {
+                Token = tokenValue,
+                UserId = user.Id, // Assuming your User entity has a property named Id
+                IssuedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddDays(_settings.RefreshTokenExpirationDays), // You'd probably want to specify how long until this refresh token expires. This is just an example.
+                IsUsed = false,
+                IsRevoked = false
+            }; 
+            return token;
+        }
+ 
+            private IEnumerable<Claim> getClaims(User user)
         {
             //  JwtRegisteredClaimNames.Sub //
 

@@ -18,9 +18,10 @@ namespace Services.Services
     {
         private IRepository<User> _repo;
         private IRepository<RefreshToken> _repoR;
-
-        public UserService(IRepository<RefreshToken> repoR,IRepository<User> repo, ILogger<UserService> logger) : base(logger)
+        private IJwtService _jwt;
+        public UserService(IJwtService jwt, IRepository<RefreshToken> repoR, IRepository<User> repo, ILogger<UserService> logger) : base(logger)
         {
+            _jwt = jwt;
             _repo = repo;
             _repoR = repoR;
         }
@@ -43,7 +44,7 @@ namespace Services.Services
 
                 throw new Exception(Resource.GeneralErrorTryAgain);
             }
-        } 
+        }
 
         public async Task<ServiceResult> GetRefreshTokenForUser(string userName, CancellationToken cancellationToken)
         {
@@ -55,12 +56,12 @@ namespace Services.Services
                 if (user is null)
                     return NotFound(ErrorCodeEnum.NotFound, Resource.NotFound, null);///
 
-                var refreshToken = await _repoR.TableNoTracking.Where(x=>x.UserId ==  user.Id).FirstOrDefaultAsync(cancellationToken); 
+                var refreshToken = await _repoR.TableNoTracking.Where(x => x.UserId == user.Id).FirstOrDefaultAsync(cancellationToken);
 
                 if (refreshToken is null)
                     return NotFound(ErrorCodeEnum.NotFound, Resource.NotFound, null);///
 
-                return Ok(refreshToken.Token);
+                return Ok(refreshToken);
             }
             catch (Exception ex)
             {
@@ -117,7 +118,7 @@ namespace Services.Services
             try
             {
                 // Find the user by username
-                var useResult =await GetUserByUsername(username, cancellation);
+                var useResult = await GetUserByUsername(username, cancellation);
                 var user = useResult.Data as User;
 
                 if (user is null)
@@ -127,16 +128,17 @@ namespace Services.Services
                 // if you have a separate table for RefreshTokens, then you'll need to query that table
                 var refreshTokenEntity = await _repoR.TableNoTracking.SingleOrDefaultAsync(rt => rt.UserId == user.Id);
 
+                var token = await _jwt.GenerateRefreshToken(user);
+
                 if (refreshTokenEntity == null)
                 {
                     // This user doesn't have a refresh token, so let's create one
                     await _repoR.AddAsync(new RefreshToken
-                    {
-                        //TODO : we can hash the token
-                        Token = CreateRefreshToken.GenerateRefreshToken(),
-                        UserId = user.Id,
-                        IssuedAt = DateTime.UtcNow,
-                        ExpiresAt = DateTime.UtcNow.AddMonths(1),  // Example expiration
+                    { 
+                        Token = HashToken.HashRefreshToken(token.Token),
+                        UserId = token.UserId,
+                        IssuedAt = token.IssuedAt,
+                        ExpiresAt = token.ExpiresAt,  // Example expiration
                         IsUsed = false,
                         IsRevoked = false
                     }, cancellation);
@@ -144,26 +146,34 @@ namespace Services.Services
                 else
                 {
                     // Update the existing refresh token
-
-                    //TODO : we can hash the token
-                    refreshTokenEntity.Token = CreateRefreshToken.GenerateRefreshToken();
-                    refreshTokenEntity.IssuedAt = DateTime.UtcNow;
-                    refreshTokenEntity.ExpiresAt = DateTime.UtcNow.AddMonths(1); // Update expiration as per your needs
-                    refreshTokenEntity.IsUsed = false;
-                    refreshTokenEntity.IsRevoked = false;
+                     
+                    refreshTokenEntity.Token = HashToken.HashRefreshToken(token.Token);
+                    refreshTokenEntity.IssuedAt = token.IssuedAt;
+                    refreshTokenEntity.ExpiresAt = token.ExpiresAt; // Update expiration as per your needs
+                    refreshTokenEntity.IsUsed = token.IsUsed;
+                    refreshTokenEntity.IsRevoked = token.IsRevoked;
 
                     await _repoR.UpdateAsync(refreshTokenEntity, cancellation);
                 }
-
-                return Ok();
+                
+                // send a data that includes exact Token (not hashed one)
+                var result = new RefreshToken
+                {
+                    Token = token.Token,
+                    UserId = token.Id,
+                    IssuedAt = token.IssuedAt,
+                    ExpiresAt = token.ExpiresAt,  // Example expiration
+                    IsUsed = false,
+                    IsRevoked = false
+                };
+                return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, null, null);
 
                 return InternalServerError(ErrorCodeEnum.InternalError, Resource.GeneralErrorTryAgain, null);
-            }
-
+            } 
         }
     }
 }
