@@ -10,8 +10,8 @@ namespace Services.Services.Interfaces
 {
     public interface IAccountService
     {
-        public Task<ServiceResult> Login(TokenRequest tokenRequest, CancellationToken cancellationToken); 
-        //public Task<ServiceResult> UserSignUp(UserViewModel user, CancellationToken cancellationToken);
+        public Task<ServiceResult> Login(TokenRequest tokenRequest, CancellationToken cancellationToken);
+        public Task<ServiceResult> RegisterUser(UserViewModel request, CancellationToken cancellationToken);
 
     }
 }

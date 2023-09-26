@@ -11,11 +11,13 @@ namespace Services.Services.Interfaces
 {
     public interface IUserService
     {
+        public Task<ServiceResult> AddUser(User user, CancellationToken cancellationToken);
         public Task<ServiceResult> GetUserByUsername(string userName, CancellationToken cancellationToken);
         public  Task<ServiceResult> GetRefreshTokenForUser(string userName, CancellationToken cancellationToken);
         public  Task<ServiceResult> UpdateRefreshTokenForUser(string username , CancellationToken cancellation);
         public Task<RefreshToken> GetRefreshTokenByToken(string token, CancellationToken cancellationToken);
         public Task<User> GetUserByData(string username, string password,CancellationToken cancellationToken);
+        public Task<User> GetUserById(int Id,CancellationToken cancellationToken);
          
     }
 }

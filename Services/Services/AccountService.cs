@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Services.Services
 {
@@ -27,36 +28,52 @@ namespace Services.Services
             _jwtService = jwtService;
         }
 
-        private const string GrantTypePassword = "password";
-        private const string GrantTypeRefreshToken = "refresh_token";
+
+        private const string GrantTypePassword = "password"; 
+        public async Task<ServiceResult> RegisterUser(UserViewModel request, CancellationToken cancellationToken)
+        {
+            try
+            {
+                // 1. Check if the user already exists
+                var existingUser = await _user.GetUserByUsername(request.UserName, cancellationToken);
+
+                if (existingUser != null)
+                {
+                    return BadRequest(ErrorCodeEnum.BadRequest, Resource.AlreadyExists, null);
+                }
+
+                // 2. Hash the password (bcrypt, argon2, etc.)
+                var hashedPassword = SecurityHelper.GetSha256Hash(request.Password);
+
+                // 3. Create a new user entity and save it
+                var newUser = new User
+                {
+                    UserName = request.UserName,
+                    Email = request.Email,
+                    PasswordHash = hashedPassword,
+                    FullName = request.FullName,
+                    Age = request.Age,
+                    IsActive = true
+
+                };
+                await _user.AddUser(newUser, cancellationToken);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during registration process.");
+                return InternalServerError(ErrorCodeEnum.InternalError, Resource.GeneralErrorTryAgain, null);
+            }
+        } 
 
         public async Task<ServiceResult> Login(TokenRequest tokenRequest, CancellationToken cancellationToken)
         {
             try
             {
-                switch (tokenRequest.grant_type.ToLowerInvariant())
-                {
-                    case GrantTypePassword:
-                        return await HandlePasswordGrantType(tokenRequest, cancellationToken);
+                if (!tokenRequest.grant_type.Equals(GrantTypePassword, StringComparison.OrdinalIgnoreCase))
+                    return BadRequest(ErrorCodeEnum.BadRequest, "OAuth flow should be password !!", null);
 
-                    case GrantTypeRefreshToken:
-                        return await HandleRefreshTokenGrantType(tokenRequest, cancellationToken);
-
-                    default:
-                        return BadRequest(ErrorCodeEnum.BadRequest, "OAuth flow should be password or refresh_token !!", null);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during login process.");
-                return InternalServerError(ErrorCodeEnum.InternalError, Resource.GeneralErrorTryAgain, null);
-            }
-        }
-
-        private async Task<ServiceResult> HandlePasswordGrantType(TokenRequest tokenRequest, CancellationToken cancellationToken)
-        {
-            try
-            {
                 var passwordHash = SecurityHelper.GetSha256Hash(tokenRequest.password); // Consider using bcrypt or argon2
                 var user = await _user.GetUserByData(tokenRequest.username, passwordHash, cancellationToken);
 
@@ -66,9 +83,17 @@ namespace Services.Services
                 if (!user.IsActive)
                     return BadRequest(ErrorCodeEnum.BadRequest, Resource.UserIsNotActive, null);
 
-                var token = await _jwtService.GenerateAccessToken(user);
-                // TODO: Also generate and return a refresh token here if needed.
-                return Ok(token);
+                var accessToken = await _jwtService.GenerateAccessToken(user);
+
+                // TODO: Save the refresh token in the database.
+                var refreshTokenResult = await _user.UpdateRefreshTokenForUser(user.UserName, cancellationToken);
+                var refreshToken = refreshTokenResult.Data as RefreshToken;
+
+                return Ok(new
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken
+                });
             }
             catch (Exception ex)
             {
@@ -76,38 +101,43 @@ namespace Services.Services
                 return InternalServerError(ErrorCodeEnum.InternalError, Resource.GeneralErrorTryAgain, null);
             }
         }
-
-        private async Task<ServiceResult> HandleRefreshTokenGrantType(TokenRequest tokenRequest, CancellationToken cancellationToken)
+     
+        public async Task<ServiceResult> GetNewAccessTokenUsingRefreshToken(string refreshToken,string username, CancellationToken cancellationToken)
         {
             try
             {
                 // Retrieve the stored refresh token
-                var storedRefreshTokenResult = await _user.GetRefreshTokenForUser(tokenRequest.username, cancellationToken);
-                var storedRefreshToken = storedRefreshTokenResult.Data as RefreshToken;
-  
+                var storedRefreshToken = await _user.GetRefreshTokenByToken(refreshToken , cancellationToken);
+
                 if (storedRefreshToken == null || storedRefreshToken.ExpiresAt < DateTime.UtcNow || storedRefreshToken.IsUsed || storedRefreshToken.IsRevoked)
                 {
                     if (storedRefreshToken?.ExpiresAt < DateTime.UtcNow)
                     {
-                        return await PrepareExpiredTokenResponse(tokenRequest, cancellationToken);
+                        return await PrepareExpiredTokenResponse(username,cancellationToken); // Adjusted this to return a BadRequest directly.
                     }
-                    return await PrepareInvalidTokenResponse(tokenRequest, cancellationToken);
+                    return   await PrepareInvalidTokenResponse(username,cancellationToken); // Adjusted this to return a BadRequest directly.
                 }
 
                 // Fetch associated user
-                var userResult = await _user.GetUserByUsername(tokenRequest.username, cancellationToken);
-                var user = userResult.Data as User;
+                var user = await _user.GetUserById(storedRefreshToken.UserId, cancellationToken);
 
                 if (user == null || !user.IsActive)
                 {
                     return NotFound(ErrorCodeEnum.NotFound, Resource.NotFound, null);
                 }
 
-                // Mark current refresh token as used
+                // Generate a new access token for the user
+                var newAccessToken = await _jwtService.GenerateAccessToken(user);
+
+                // Mark current refresh token as used (Optional: Consider generating a new refresh token too and sending it along)
                 storedRefreshToken.IsUsed = true;
                 await _repoR.UpdateAsync(storedRefreshToken, cancellationToken);
-                  
-                return Ok(storedRefreshToken.Token);
+
+                return Ok(new
+                {
+                    AccessToken = newAccessToken,
+                    // Optionally, if you're generating a new refresh token: RefreshToken = newRefreshToken.Token
+                });
             }
             catch (Exception ex)
             {
@@ -115,11 +145,12 @@ namespace Services.Services
                 return InternalServerError(ErrorCodeEnum.InternalError, Resource.GeneralErrorTryAgain, null);
             }
         }
-        private async Task<ServiceResult> PrepareInvalidTokenResponse(TokenRequest tokenRequest, CancellationToken cancellationToken)
+
+         private async Task<ServiceResult> PrepareInvalidTokenResponse(string username, CancellationToken cancellationToken)
         {
             try
             {
-                await _user.UpdateRefreshTokenForUser(tokenRequest.username, cancellationToken);
+                await _user.UpdateRefreshTokenForUser(username, cancellationToken);
                 return BadRequest(ErrorCodeEnum.BadRequest, "Invalid refresh token", null);
             }
             catch (Exception ex)
@@ -129,11 +160,11 @@ namespace Services.Services
             }
         }
 
-        private async Task<ServiceResult> PrepareExpiredTokenResponse(TokenRequest tokenRequest, CancellationToken cancellationToken)
+        private async Task<ServiceResult> PrepareExpiredTokenResponse(string username, CancellationToken cancellationToken)
         {
             try
             {
-                await _user.UpdateRefreshTokenForUser(tokenRequest.username, cancellationToken);
+                await _user.UpdateRefreshTokenForUser( username, cancellationToken);
                 return BadRequest(ErrorCodeEnum.BadRequest, Resource.ExpiredDate, null);
             }
             catch (Exception ex)

@@ -71,6 +71,22 @@ namespace Services.Services
             }
 
         }
+        public async Task<ServiceResult> AddUser(User user, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await _repo.AddAsync(user, cancellationToken);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, null, null);
+
+                return InternalServerError(ErrorCodeEnum.InternalError, Resource.GeneralErrorTryAgain, null);
+            }
+        }
+
 
         public async Task<User> GetUserByData(string username, string password, CancellationToken cancellationToken)
         {
@@ -134,7 +150,7 @@ namespace Services.Services
                 {
                     // This user doesn't have a refresh token, so let's create one
                     await _repoR.AddAsync(new RefreshToken
-                    { 
+                    {
                         Token = HashToken.HashRefreshToken(token.Token),
                         UserId = token.UserId,
                         IssuedAt = token.IssuedAt,
@@ -146,7 +162,7 @@ namespace Services.Services
                 else
                 {
                     // Update the existing refresh token
-                     
+
                     refreshTokenEntity.Token = HashToken.HashRefreshToken(token.Token);
                     refreshTokenEntity.IssuedAt = token.IssuedAt;
                     refreshTokenEntity.ExpiresAt = token.ExpiresAt; // Update expiration as per your needs
@@ -155,7 +171,7 @@ namespace Services.Services
 
                     await _repoR.UpdateAsync(refreshTokenEntity, cancellation);
                 }
-                
+
                 // send a data that includes exact Token (not hashed one)
                 var result = new RefreshToken
                 {
@@ -173,7 +189,26 @@ namespace Services.Services
                 _logger.LogError(ex, null, null);
 
                 return InternalServerError(ErrorCodeEnum.InternalError, Resource.GeneralErrorTryAgain, null);
-            } 
+            }
+        }
+
+        public async Task<User> GetUserById(int Id, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var user = await _repo.GetByIdAsync(cancellationToken,Id);
+
+                if (user is null)
+                    return null;
+
+                return user;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, null, null);
+
+                throw new Exception(Resource.GeneralErrorTryAgain);
+            }
         }
     }
 }
