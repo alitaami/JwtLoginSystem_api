@@ -1,9 +1,11 @@
-﻿using Entities.Base;
+﻿using Common.Resources;
+using Entities.Base;
 using Entities.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services.Services.Interfaces;
 using System.Net;
+using System.Text.RegularExpressions;
 
 namespace TavCompanyTask_Api.Controllers
 {
@@ -28,31 +30,58 @@ namespace TavCompanyTask_Api.Controllers
         /// <returns></returns> 
         /// 
         [HttpPost]
-        [ProducesResponseType(typeof(JwtToken), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> Login([FromForm] TokenRequest tokenRequest, CancellationToken cancellationToken)
         {
-            var result = await _accountService.Login(tokenRequest, cancellationToken);
-            return APIResponse(result);
+            try
+            {
+                var result = await _accountService.Login(tokenRequest, cancellationToken);
+                return APIResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(Resource.GeneralErrorTryAgain);
+            }
         }
 
-        ///// <summary>
-        ///// SignUp users
-        ///// </summary>
-        ///// <param name="user"></param>
-        ///// <param name="cancellationToken"></param>
-        ///// <returns></returns> 
-        ///// 
-        //[HttpPost]
-        //[ProducesResponseType(typeof(Ok), (int)HttpStatusCode.OK)]
-        //[ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.BadRequest)]
-        //[ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.InternalServerError)]
-        //public async Task<IActionResult> SignUp([FromBody] UserViewModel user, CancellationToken cancellationToken)
-        //{
-        //    var result = await _accountService.UserSignUp(user, cancellationToken);
+        [HttpPost]
+        [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> RefreshToken(CancellationToken cancellationToken)
+        {
+            try
+            {
+                string refreshToken = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+                string username = Request.Headers["Username"].ToString();
 
-        //    return APIResponse(result);
-        //}
+                var result = await _accountService.GetNewAccessTokenUsingRefreshToken(refreshToken, username, cancellationToken);
+
+                return APIResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(Resource.GeneralErrorTryAgain);
+            }
+        }
+        [HttpPost]
+        [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.InternalServerError)]
+        public async Task<IActionResult> SignUp(UserViewModel model, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await _accountService.RegisterUser(model, cancellationToken);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(Resource.GeneralErrorTryAgain);
+            }
+        }
     }
 }
