@@ -23,7 +23,7 @@ namespace TavCompanyTask_Api.Controllers
             _accountService = accountService;
         }
         /// <summary>
-        /// Login ( using JWT )
+        /// Login ( after authenticate user , it sends access and refresh token for future uses ) .
         /// </summary>
         /// <param name="tokenRequest"></param>
         /// <param name="cancellationToken"></param>
@@ -46,6 +46,11 @@ namespace TavCompanyTask_Api.Controllers
             }
         }
 
+        /// <summary>
+        /// While access token has expired we can use the refresh token and username ( in the header ) to get new access token . 
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [HttpPost]
         [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.BadRequest)]
@@ -66,6 +71,13 @@ namespace TavCompanyTask_Api.Controllers
                 return InternalServerError(Resource.GeneralErrorTryAgain);
             }
         }
+
+        /// <summary>
+        /// Sign up section
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         [HttpPost]
         [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.BadRequest)]
