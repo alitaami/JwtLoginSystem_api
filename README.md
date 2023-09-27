@@ -4,7 +4,7 @@
 Welcome to the JwtLoginSystem API documentation. This API provides JWT authentication using access and refresh tokens. The API is equipped with Swagger for interactive documentation and testing.
 
 **<h3>API Endpoints**</h3>
-use swagger for test Endpoints.
+Use Swagger for test Endpoints.
 **<h4>SignUp**</h4>
 
     Use this endpoint to register new users.
