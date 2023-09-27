@@ -4,6 +4,7 @@
 Welcome to the JwtLoginSystem API documentation. This API provides JWT authentication using access and refresh tokens. The API is equipped with Swagger for interactive documentation and testing.
 
 **<h3>API Endpoints**</h3>
+use swagger for test Endpoints.
 **<h4>SignUp**</h4>
 
     Use this endpoint to register new users.
@@ -24,13 +25,10 @@ If your access token expires, use the refresh token obtained during login to req
 
 **<h3>Docker Images**</h3>
 
-The Docker images for this project are available as .tar files in this repository.
+The Docker images for this project are available as .tar files in my docker hub.
+To use them write these in your command line:
 
-To use them:
-
-    1-Download the .tar files.
-    2-Load them into Docker using the following commands:
-
-    docker load -i /path/where/you/saved/jwtloginsystem_api-webapp.tar
-    docker load -i /path/where/you/saved/mssql_server.tar
+```bash
+ docker pull alitaami/jwtloginsystem_api-webapp:latest 
+ docker pull alitaami/mssql_server:2019-GA-ubuntu-16.04 
  
