@@ -55,13 +55,17 @@ namespace TavCompanyTask_Api.Controllers
         [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType(typeof(ApiResult), (int)HttpStatusCode.InternalServerError)]
-        public async Task<IActionResult> RefreshToken(CancellationToken cancellationToken)
+        public async Task<IActionResult> RefreshToken([FromHeader(Name = "Authorization")] string bearerToken, [FromHeader(Name = "Username")] string username, CancellationToken cancellationToken)
         {
+            if (string.IsNullOrWhiteSpace(bearerToken) || string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest(Resource.InvalidOperationException);
+            }
+
+            string refreshToken = bearerToken.Replace("Bearer ", "");
+
             try
             {
-                string refreshToken = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-                string username = Request.Headers["Username"].ToString();
-
                 var result = await _accountService.GetNewAccessTokenUsingRefreshToken(refreshToken, username, cancellationToken);
 
                 return APIResponse(result);
